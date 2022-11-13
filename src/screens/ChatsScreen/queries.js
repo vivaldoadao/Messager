@@ -7,6 +7,7 @@ query GetUser($id: ID!) {
         items {
           chatRoom {
             id
+            updatedAt
             users {
               items {
                 id
