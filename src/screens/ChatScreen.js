@@ -8,6 +8,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
 import { API, graphqlOperation } from 'aws-amplify';
 import { getChatRoom, listMessagesByChatRoom } from '../graphql/queries';
+import { onCreateMessage, onUpdateChatRoom } from '../graphql/subscriptions';
 
 const ChatScreen = () => {
 
@@ -25,6 +26,16 @@ const ChatScreen = () => {
         
       
     );
+
+    const subscription = API.graphql(graphqlOperation(onUpdateChatRoom, {filter : {
+      id: { eq: chatroomID }
+    }})).subscribe({
+      next: ({value}) =>{
+        setChatRoom((cr) => ({...(cr || {}), ...value.data.onUpdateChatRoom}));
+      },
+      error: (err) => console.warn(err),
+    });
+    return () => subscription.unsubscribe();
   },[chatroomID]);
 
   // fetching the messages
@@ -36,6 +47,20 @@ const ChatScreen = () => {
         setMessages(result.data?.listMessagesByChatRoom.items);
       }
     );
+
+    // Subscribe to new messages 
+    const subscription = API.graphql(graphqlOperation(onCreateMessage, {
+      filter:{ chatroomID: { eq : chatRoom}}
+    })).subscribe({
+      next: ({ value}) => {
+        setMessages((m) => [value.data.onCreateMessage, ...m])
+      },
+      error: (err) => console.warn(err),
+    });
+    // Stop receiving data update from the subscription
+    return () => subscription.unsubscribe();
+
+
   },[chatroomID])
 
 
